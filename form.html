@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Animated Switchable Forms - Dark Theme</title>
+  <!-- Add Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <style>
+    :root {
+      --bg-color: #121212;
+      --card-bg: #1e1e1e;
+      --text-color: #e0e0e0;
+      --input-bg: #2d2d2d;
+      --input-border: #3d3d3d;
+      --button-bg: #333333;
+      --button-active: #8a2be2;
+      --button-hover: #9b4dff;
+      --shadow-color: rgba(0,0,0,0.3);
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      padding: 30px;
+      transition: all 0.3s ease;
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 550px;
+      position: relative;
+    }
+
+    .form-container {
+      position: relative;
+      min-height: 400px;
+      width: 100%;
+      perspective: 1000px;
+    }
+
+    form {
+      max-width: 500px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 8px 25px var(--shadow-color);
+      position: absolute;
+      width: 100%;
+      opacity: 0;
+      transform: rotateY(45deg) translateX(100%);
+      transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.5s ease;
+      pointer-events: none;
+      cursor: pointer;
+      left: 0;
+      top: 0;
+      box-sizing: border-box;
+      transform-origin: left center;
+      overflow: hidden;
+    }
+
+    /* Removed purple animation on form active */
+
+    form.active {
+      opacity: 1;
+      transform: rotateY(0) translateX(0);
+      position: relative;
+      pointer-events: all;
+      z-index: 1;
+    }
+
+    form.previous {
+      transform: rotateY(-45deg) translateX(-50%);
+      opacity: 0;
+      z-index: 0;
+    }
+
+    .form-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--input-border);
+    }
+
+    .form-title {
+      color: var(--text-color);  /* Changed from purple to text color */
+      font-size: 1.5rem;
+      margin: 0;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--text-color);
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      background: var(--input-bg);
+      color: var(--text-color);
+      transition: all 0.3s ease;
+      box-sizing: border-box;
+    }
+
+    input:focus, select:focus {
+      border-color: #555;  /* Changed from purple to subtle gray */
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(85, 85, 85, 0.3);  /* Changed from purple to subtle gray */
+    }
+
+    input:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    select option {
+      background: var(--input-bg);
+      color: var(--text-color);
+    }
+
+    /* Removed tap hint animation */
+    .tap-hint {
+      display: none;  /* Hide the tap hint */
+    }
+
+    .home-button {
+      position: fixed;
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #444;  /* Changed from purple to gray */
+      color: white;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease;
+      z-index: 100;
+      border: none;
+      font-size: 24px;
+    }
+
+    .home-button:hover {
+      background: #555;  /* Changed from purple to gray */
+      transform: translateY(-50%) scale(1.1);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Removed ripple animation */
+    .form-ripple {
+      display: none;  /* Hide the ripple effect */
+    }
+
+    .submit-btn {
+      background: #444;  /* Changed from purple to gray */
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 100%;
+      margin-top: 20px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+
+    .submit-btn:hover {
+      background: #555;  /* Changed from purple to gray */
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .submit-btn:active {
+      transform: translateY(0);
+    }
+
+    .form-nav-btn {
+      background: var(--button-bg);
+      color: white;
+      border: none;
+      width: 30px;
+      height: 30px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-left: 5px;
+    }
+
+    .form-nav-btn:hover:not([disabled]) {
+      background: #555;  /* Changed from purple to gray */
+    }
+
+    .form-nav-btn[disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin-right: 10px;
+      cursor: pointer;
+      accent-color: #555;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+    }
+
+    .checkbox-group label {
+      margin-bottom: 0;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 15px;
+      }
+      
+      form {
+        padding: 20px;
+      }
+
+      .home-button {
+        left: 10px;
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+      }
+    }
+
+    /* Extra mobile styles */
+    @media (max-width: 480px) {
+      .container {
+        max-width: 100%;
+      }
+      
+      form {
+        padding: 15px;
+      }
+      
+      .form-title {
+        font-size: 1.2rem;
+      }
+      
+      input, select {
+        padding: 10px;
+      }
+      
+      .home-button {
+        top: 20px;
+        transform: none;
+        width: 35px;
+        height: 35px;
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header1" id="header1" style="
+    background-color: var(--card-bg); 
+    color: var(--text-primary); 
+    padding: 1.5rem 0;
+    border-bottom: 1px solid rgba(76, 201, 240, 0.1);
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+    <div class="container1" style="max-width: 1200px; margin: 0 auto; padding: 0 2rem;">
+        <nav class="nav1" id="nav1" style="display: flex; justify-content: space-between; align-items: center;">
+            <a href="documentantion.html" class="logo1" id="logo1" style="
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: var(--primary-color);
+                text-decoration: none;
+                background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;"></a>
+            
+            <ul class="menu1" id="menu1" style="
+                display: flex;
+                list-style-type: none;
+                margin: 0;
+                padding: 0;
+                gap: 1rem;">
+                <li>
+                    <a href="documentantion.html" class="link1" id="link1" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">DOC</a>
+                </li>
+                <li>
+                    <a href="form.html" class="link2" id="link2" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">Add</a>
+                </li>
+                <li>
+                    <a href="quiryfinal.html" class="link3" id="link3" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">Dashboard</a>
+                </li>
+                <li>
+                    <a href="search.html" class="link4" id="link4" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">Search</a>
+                </li>
+                <li>
+                    <a href="anaylisis.html" class="link5" id="link5" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.3);
+                        background-color: var(--primary-color);
+                        font-weight: 500;">Analysis</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</header>
+  <div class="container">
+    <div class="form-container" id="formContainer">
+
+      <!-- Form 1 -->
+      <form id="form1" class="active">
+        <div class="form-header">
+          <h2 class="form-title">Student Information</h2>
+          <div class="form-nav">
+            <button type="button" class="form-nav-btn" disabled title="Previous">&lt;</button>
+            <button type="button" class="form-nav-btn" onclick="nextForm(1)" title="Next">&gt;</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="student-name">Name:</label>
+          <input id="student-name" type="text" placeholder="Enter student name" required/>
+        </div>
+        <div class="form-group">
+          <label for="student-class">Class:</label>
+          <input id="student-class" type="text" placeholder="Enter class" required />
+        </div>
+        <div class="form-group">
+          <label for="student-timing">Timing:</label>
+          <select id="student-timing">
+            <option value="">Select Timing</option>
+            <option value="morning">8:00 AM - 10:00 AM</option>
+            <option value="evening">6:00 PM - 8:00 PM</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="student-fee">Fee:</label>
+          <input id="student-fee" type="number" placeholder="Enter fee amount" required />
+        </div>
+        <div class="form-group">
+          <label for="student-subject">Subjects:</label>
+          <div class="checkbox-group">
+            <input type="checkbox" id="math" name="subjects" value="Math">
+            <label for="math">Math</label>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="science" name="subjects" value="Science">
+            <label for="science">Science</label>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="english" name="subjects" value="English">
+            <label for="english">English</label>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="social" name="subjects" value="Social">
+            <label for="social">Social</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="student-last-paid">Last Paid:</label>
+          <input id="student-last-paid" type="date" disabled />
+        </div>
+        <button type="submit" class="submit-btn">Submit Student Information</button>
+      </form>
+
+      <!-- Form 2 -->
+      <form id="form2">
+        <div class="form-header">
+          <h2 class="form-title">Course Registration</h2>
+          <div class="form-nav">
+            <button type="button" class="form-nav-btn" onclick="prevForm(2)" title="Previous">&lt;</button>
+            <button type="button" class="form-nav-btn" onclick="nextForm(2)" title="Next">&gt;</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="course-name">Name:</label>
+          <input id="course-name" type="text" placeholder="Enter your name" required/>
+        </div>
+        <div class="form-group">
+          <label for="student-subject">Course:</label>
+          <div class="checkbox-group">
+            <input type="checkbox" id="graphic-design" name="courses" value="Graphic Design">
+            <label for="graphic-design">Graphic Design</label>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="computer-science" name="courses" value="Computer Science">
+            <label for="computer-science">Computer Science</label>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="spoken-english" name="courses" value="Spoken English">
+            <label for="spoken-english">Spoken English</label>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="tally" name="courses" value="Tally">
+            <label for="tally">Tally</label>
+          </div>
+        </div>
+       
+        <div class="form-group">
+          <label for="course-timing">Timing:</label>
+          <select id="course-timing" required>
+            <option value="">Select Timing</option>
+            <option value="morning">8:00 AM - 10:00 AM</option>
+            <option value="evening">6:00 PM - 8:00 PM</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="course-fee">Fee:</label>
+          <input id="course-fee" type="number" placeholder="Enter fee amount" required />
+        </div>
+        <div class="form-group">
+          <label for="course-last-paid">Last Paid:</label>
+          <input id="course-last-paid" type="date" disabled />
+        </div>
+        <button type="submit" class="submit-btn">Submit Course Registration</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Firebase configuration
+    const firebaseConfig = {
+      // Replace with your Firebase config
+      apiKey: "AIzaSyCQNpkj3EZtF6KNiFcwNnQU3Ez0f7Ocr4U",
+              authDomain: "admin-database-ca73d.firebaseapp.com",
+              projectId: "admin-database-ca73d",
+              storageBucket: "admin-database-ca73d.firebasestorage.app",
+              messagingSenderId: "796828178511",
+              appId: "1:796828178511:web:1695f31e505d391d38723a"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Get elements
+    const formContainer = document.getElementById('formContainer');
+    const forms = document.querySelectorAll("form");
+    const tapHint = document.getElementById('tapHint');
+    let currentForm = 1;
+    let startX, moveX;
+    let isTapping = false;
+    
+    // Prevent default form submission and handle it ourselves
+    forms.forEach((form, index) => {
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (index === 0) {
+          // Handle Student Information form (form1)
+          saveStudentForm();
+        } else if (index === 1) {
+          // Handle Course Registration form (form2)
+          saveCourseForm();
+        }
+      });
+    });
+    
+    // Function to save Student Information form data to Firebase
+    function saveStudentForm() {
+      // Get form values
+      const name = document.getElementById('student-name').value;
+      const studentClass = document.getElementById('student-class').value;
+      const timing = document.getElementById('student-timing').value;
+      const fee = document.getElementById('student-fee').value;
+      
+      // Get selected subjects
+      const subjectCheckboxes = document.querySelectorAll('input[name="subjects"]:checked');
+      const subjects = Array.from(subjectCheckboxes).map(checkbox => checkbox.value);
+      
+      // Create data object
+      const studentData = {
+        name: name,
+        class: studentClass,
+        timing: timing,
+        fee: parseFloat(fee) || 0,
+        subjects: subjects,
+        status: "demo", // Add status field as "demo"
+        timestamp: firebase.firestore.FieldValue.serverTimestamp() // Add server timestamp
+      };
+      
+      // Save to Firebase
+      db.collection("students").add(studentData)
+        .then((docRef) => {
+          console.log("Student document written with ID: ", docRef.id);
+          alert('Student information saved successfully!');
+          // Reset the form
+          document.getElementById('form1').reset();
+        })
+        .catch((error) => {
+          console.error("Error adding student document: ", error);
+          alert('Error saving student information. Please try again.');
+        });
+    }
+    
+    // Function to save Course Registration form data to Firebase
+    function saveCourseForm() {
+      // Get form values
+      const name = document.getElementById('course-name').value;
+      const timing = document.getElementById('course-timing').value;
+      const fee = document.getElementById('course-fee').value;
+      
+      // Get selected courses (to be converted to subjects)
+      const courseCheckboxes = document.querySelectorAll('input[name="courses"]:checked');
+      const courses = Array.from(courseCheckboxes).map(checkbox => checkbox.value);
+      
+      // Create data object - convert courses to subjects as requested
+      const courseData = {
+        name: name,
+        timing: timing,
+        fee: parseFloat(fee) || 0,
+        subject: courses, // Convert courses to subject field
+        status: "demo", // Add status field as "demo"
+        timestamp: firebase.firestore.FieldValue.serverTimestamp() // Add server timestamp
+      };
+      
+      // Save to Firebase
+      db.collection("students").add(courseData)
+        .then((docRef) => {
+          console.log("Course document written with ID: ", docRef.id);
+          alert('Course registration saved successfully!');
+          // Reset the form
+          document.getElementById('form2').reset();
+        })
+        .catch((error) => {
+          console.error("Error adding course document: ", error);
+          alert('Error saving course registration. Please try again.');
+        });
+    }
+    
+    // Add touch events for swiping
+    formContainer.addEventListener('touchstart', handleTouchStart, false);
+    formContainer.addEventListener('touchmove', handleTouchMove, false);
+    formContainer.addEventListener('touchend', handleTouchEnd, false);
+    
+    // Touch event handlers for swipe
+    function handleTouchStart(e) {
+      // Don't initialize swipe if we're touching a form control
+      if (e.target.tagName === 'INPUT' || 
+          e.target.tagName === 'SELECT' || 
+          e.target.tagName === 'BUTTON' ||
+          e.target.tagName === 'LABEL' ||
+          e.target.tagName === 'OPTION') {
+        return;
+      }
+      
+      startX = e.touches[0].clientX;
+      isTapping = true;
+    }
+    
+    function handleTouchMove(e) {
+      if (!startX) return;
+      moveX = e.touches[0].clientX;
+      
+      // Calculate swipe distance
+      const diffX = startX - moveX;
+      
+      // Early return if just tapping
+      if (Math.abs(diffX) < 10) return;
+      
+      // Prevent default scrolling behavior when swiping horizontally
+      if (Math.abs(diffX) > 10) {
+        e.preventDefault();
+      }
+      
+      // If we're swiping, we're not tapping
+      if (Math.abs(diffX) > 30) {
+        isTapping = false;
+      }
+    }
+    
+    function handleTouchEnd(e) {
+      if (!startX) return;
+      
+      // Don't process touch end if we're touching a form control
+      if (e.target.tagName === 'INPUT' || 
+          e.target.tagName === 'SELECT' || 
+          e.target.tagName === 'BUTTON' ||
+          e.target.tagName === 'LABEL' ||
+          e.target.tagName === 'OPTION') {
+        startX = null;
+        moveX = null;
+        isTapping = false;
+        return;
+      }
+      
+      // Check if this was a tap or a swipe
+      const diffX = moveX ? startX - moveX : 0;
+      
+      // If it was a tap (not much horizontal movement)
+      if (Math.abs(diffX) < 30 && isTapping) {
+        // If we're on the last form, go back to first form
+        if (currentForm === 2) {
+          showForm(1);
+        } else {
+          // Otherwise go to next form
+          nextForm(currentForm);
+        }
+      }
+      // Right swipe (previous form)
+      else if (diffX < -50 && currentForm > 1) {
+        prevForm(currentForm);
+      }
+      // Left swipe (next form)
+      else if (diffX > 50 && currentForm < 2) {
+        nextForm(currentForm);
+      }
+      
+      // Reset values
+      startX = null;
+      moveX = null;
+      isTapping = false;
+    }
+    
+    // Main function to show a specific form
+    function showForm(formNum) {
+      // Update current form tracking
+      const oldForm = currentForm;
+      currentForm = formNum;
+      
+      // Add previous class to determine animation direction
+      forms.forEach((form, idx) => {
+        form.classList.remove("active", "previous");
+        if (idx + 1 < formNum) {
+          form.classList.add("previous");
+        }
+      });
+      
+      // Add active class to selected form with slight delay for animation
+      setTimeout(() => {
+        forms[formNum - 1].classList.add("active");
+      }, 50);
+    }
+    
+    // Go to next form
+    function nextForm(currentIndex) {
+      if (currentIndex < 2) {
+        showForm(currentIndex + 1);
+      }
+    }
+    
+    // Go to previous form
+    function prevForm(currentIndex) {
+      if (currentIndex > 1) {
+        showForm(currentIndex - 1);
+      }
+    }
+  </script>
+</body>
+</html>

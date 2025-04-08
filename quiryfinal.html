@@ -1,0 +1,914 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <!-- Firebase CDN links -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- Animation library -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+    /* Student Management Dashboard CSS - Dark Theme with Animations */
+    :root {
+      --primary-blue: #4e87f3;
+      --primary-blue-glow: rgba(78, 135, 243, 0.4);
+      --primary-green: #05d69e;
+      --primary-green-glow: rgba(5, 214, 158, 0.4);
+      --background-dark: #121212;
+      --card-dark: #1e1e1e;
+      --surface-dark: #252525;
+      --text-light: #e0e0e0;
+      --text-dim: #a0a0a0;
+      --danger-color: #ff5252;
+      --danger-glow: rgba(255, 82, 82, 0.4);
+      --warning-color: #ffab40;
+      --warning-glow: rgba(255, 171, 64, 0.4);
+      --border-radius: 10px;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: var(--background-dark);
+      color: var(--text-light);
+      line-height: 1.6;
+      padding: 10px;
+      min-height: 100vh;
+    }
+
+    /* Dashboard Layout */
+    .dashboard {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: var(--card-dark);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      animation: fadeIn 0.8s ease-in-out;
+    }
+
+    h1, h2 {
+      color: var(--text-light);
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      border-bottom: 2px solid var(--primary-blue);
+      padding-bottom: 0.75rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+      display: inline-block;
+    }
+
+    h1::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary-blue), var(--primary-green));
+      box-shadow: 0 0 8px var(--primary-blue-glow);
+      animation: glow 1.5s infinite alternate;
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      color: var(--primary-green);
+      text-shadow: 0 0 5px var(--primary-green-glow);
+    }
+
+    /* Notification Styles */
+    .notification-container {
+      margin-bottom: 1.5rem;
+    }
+
+    .notification {
+      background-color: var(--surface-dark);
+      color: var(--warning-color);
+      padding: 12px 16px;
+      border-radius: var(--border-radius);
+      margin-bottom: 12px;
+      border-left: 4px solid var(--warning-color);
+      box-shadow: 0 0 15px var(--warning-glow);
+      display: none;
+      animation: pulse 2s infinite alternate;
+      transform-origin: center left;
+    }
+
+    #payment-notification {
+      color: var(--danger-color);
+      border-left: 4px solid var(--danger-color);
+      box-shadow: 0 0 15px var(--danger-glow);
+    }
+
+    /* Tables Container */
+    .tables-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+
+    @media (min-width: 992px) {
+      .tables-container {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .table-section {
+      background-color: var(--surface-dark);
+      border-radius: var(--border-radius);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      border: 1px solid rgba(78, 135, 243, 0.1);
+      margin-bottom: 1.5rem;
+      transition: var(--transition);
+      animation: slideUp 0.6s ease-out;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .table-section:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(78, 135, 243, 0.15);
+    }
+
+    .table-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary-blue), var(--primary-green));
+      box-shadow: 0 0 8px var(--primary-blue-glow);
+    }
+
+    /* Table Styles */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    th {
+      background-color: rgba(78, 135, 243, 0.1);
+      font-weight: 600;
+      color: var(--primary-blue);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr {
+      transition: var(--transition);
+    }
+
+    tr:hover {
+      background-color: rgba(78, 135, 243, 0.1);
+    }
+
+    /* Button Styles */
+    .btn {
+      padding: 8px 16px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: var(--transition);
+      color: white;
+      position: relative;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.2);
+      transition: var(--transition);
+      z-index: -1;
+    }
+
+    .btn:hover::before {
+      left: 0;
+    }
+
+    .btn-update {
+      background: linear-gradient(135deg, var(--primary-blue), var(--primary-green));
+      box-shadow: 0 2px 10px var(--primary-blue-glow);
+    }
+
+    .btn-update:hover {
+      box-shadow: 0 4px 15px var(--primary-blue-glow);
+      transform: translateY(-2px);
+    }
+
+    .btn-delete {
+      background-color: var(--danger-color);
+      box-shadow: 0 2px 10px var(--danger-glow);
+    }
+
+    .btn-delete:hover {
+      box-shadow: 0 4px 15px var(--danger-glow);
+      transform: translateY(-2px);
+    }
+
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 100;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .modal-content {
+      background-color: var(--card-dark);
+      padding: 30px;
+      border-radius: var(--border-radius);
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+      position: relative;
+      border: 1px solid rgba(78, 135, 243, 0.2);
+      animation: zoomIn 0.3s ease-out;
+    }
+
+    .close {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-dim);
+      transition: var(--transition);
+    }
+
+    .close:hover {
+      color: var(--text-light);
+      transform: rotate(90deg);
+    }
+
+    .modal h2 {
+      margin-bottom: 15px;
+      color: var(--primary-blue);
+      text-shadow: 0 0 5px var(--primary-blue-glow);
+    }
+
+    .modal p {
+      margin-bottom: 20px;
+      color: var(--text-light);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    /* Confirmation Details Styles */
+    #confirmation-details p {
+      margin-bottom: 10px;
+      padding: 8px;
+      border-radius: 5px;
+      background-color: rgba(78, 135, 243, 0.1);
+    }
+
+    #confirmation-details strong {
+      display: inline-block;
+      width: 100px;
+      color: var(--primary-green);
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { 
+        opacity: 0;
+        transform: translateY(30px); 
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0); 
+      }
+    }
+
+    @keyframes zoomIn {
+      from { 
+        opacity: 0;
+        transform: scale(0.9); 
+      }
+      to { 
+        opacity: 1;
+        transform: scale(1); 
+      }
+    }
+
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.02); }
+    }
+
+    @keyframes glow {
+      from { box-shadow: 0 0 5px var(--primary-blue-glow); }
+      to { box-shadow: 0 0 15px var(--primary-blue-glow), 0 0 20px var(--primary-green-glow); }
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+      .dashboard {
+        padding: 15px;
+      }
+      
+      th, td {
+        padding: 10px 8px;
+        font-size: 0.9rem;
+      }
+      
+      .table-section {
+        padding: 15px;
+        margin-bottom: 1rem;
+      }
+      
+      .btn {
+        padding: 6px 12px;
+        font-size: 0.9rem;
+      }
+      
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      h2 {
+        font-size: 1.2rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      th, td {
+        padding: 8px 4px;
+        font-size: 0.8rem;
+      }
+      
+      table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+      
+      .modal-content {
+        padding: 20px;
+      }
+      
+      .btn {
+        padding: 5px 10px;
+        font-size: 0.8rem;
+      }
+    }
+
+    /* Additional Utility Classes */
+    .mt-4 {
+      margin-top: 1rem;
+    }
+
+    .mb-4 {
+      margin-bottom: 1rem;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .text-danger {
+      color: var(--danger-color);
+    }
+
+    .text-success {
+      color: var(--primary-green);
+    }
+
+    .bg-light {
+      background-color: var(--surface-dark);
+    }
+    </style>
+</head>
+<body>
+  <header class="header1" id="header1" style="
+    background-color: var(--card-bg); 
+    color: var(--text-primary); 
+    padding: 1.5rem 0;
+    border-bottom: 1px solid rgba(76, 201, 240, 0.1);
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+    <div class="container1" style="max-width: 1200px; margin: 0 auto; padding: 0 2rem;">
+        <nav class="nav1" id="nav1" style="display: flex; justify-content: space-between; align-items: center;">
+            <a href="documentantion.html" class="logo1" id="logo1" style="
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: var(--primary-color);
+                text-decoration: none;
+                background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;"></a>
+            
+            <ul class="menu1" id="menu1" style="
+                display: flex;
+                list-style-type: none;
+                margin: 0;
+                padding: 0;
+                gap: 1rem;">
+                <li>
+                    <a href="documentantion.html" class="link1" id="link1" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">DOC</a>
+                </li>
+                <li>
+                    <a href="form.html" class="link2" id="link2" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">Add</a>
+                </li>
+                <li>
+                    <a href="quiryfinal.html" class="link3" id="link3" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">Dashboard</a>
+                </li>
+                <li>
+                    <a href="search.html" class="link4" id="link4" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">Search</a>
+                </li>
+                <li>
+                    <a href="anaylisis.html" class="link5" id="link5" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.3);
+                        background-color: var(--primary-color);
+                        font-weight: 500;">Analysis</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</header>
+    <div class="dashboard animate__animated animate__fadeIn">
+        <h1>Student Management Dashboard</h1>
+        
+        <div class="notification-container">
+            <div id="demo-notification" class="notification animate__animated animate__pulse">
+                <i class="warning-icon">⚠️</i> Warning: Some demo students have been in demo status for more than 2 days.
+            </div>
+            <div id="payment-notification" class="notification animate__animated animate__pulse">
+                <i class="warning-icon">⚠️</i> Warning: Some paid students haven't paid in more than 31 days and have been marked as unpaid.
+            </div>
+        </div>
+        
+        <div class="tables-container">
+            <div class="table-section animate__animated animate__fadeInUp">
+                <h2>Demo Students</h2>
+                <table id="demo-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Class</th>
+                            <th>Subject</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="demo-table-body"></tbody>
+                </table>
+            </div>
+            
+            <div class="table-section animate__animated animate__fadeInUp" style="animation-delay: 0.2s">
+                <h2>Paid Students</h2>
+                <table id="paid-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Class</th>
+                            <th>Subject</th>
+                            <th>Last Paid</th>
+                        </tr>
+                    </thead>
+                    <tbody id="paid-table-body"></tbody>
+                </table>
+            </div>
+            
+            <div class="table-section animate__animated animate__fadeInUp" style="animation-delay: 0.4s">
+                <h2>Unpaid Students</h2>
+                <table id="unpaid-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Class</th>
+                            <th>Subject</th>
+                            <th>Last Paid</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="unpaid-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Update Modal -->
+    <div id="update-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Student Options</h2>
+            <p>What would you like to do with <span id="student-name"></span>?</p>
+            <div class="modal-actions">
+                <button id="delete-student-btn" class="btn btn-delete">Delete Student</button>
+                <button id="update-to-paid-btn" class="btn btn-update">Update to Paid</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Student Updated</h2>
+            <div id="confirmation-details"></div>
+            <div class="modal-actions">
+                <button id="confirm-btn" class="btn btn-update">Confirm</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Compact JS implementation with added animation
+        (function() {
+            // Firebase config
+            const firebaseConfig = {
+              apiKey: "AIzaSyCQNpkj3EZtF6KNiFcwNnQU3Ez0f7Ocr4U",
+              authDomain: "admin-database-ca73d.firebaseapp.com",
+              projectId: "admin-database-ca73d",
+              storageBucket: "admin-database-ca73d.firebasestorage.app",
+              messagingSenderId: "796828178511",
+              appId: "1:796828178511:web:1695f31e505d391d38723a"
+            };
+            
+            // Initialize Firebase
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+            const studentsRef = db.collection("students");
+            
+            // DOM elements
+            const el = {
+                tables: {
+                    demo: document.getElementById("demo-table-body"),
+                    paid: document.getElementById("paid-table-body"),
+                    unpaid: document.getElementById("unpaid-table-body")
+                },
+                modals: {
+                    update: document.getElementById("update-modal"),
+                    confirmation: document.getElementById("confirmation-modal")
+                },
+                buttons: {
+                    delete: document.getElementById("delete-student-btn"),
+                    update: document.getElementById("update-to-paid-btn"),
+                    confirm: document.getElementById("confirm-btn")
+                },
+                elements: {
+                    studentName: document.getElementById("student-name"),
+                    confirmDetails: document.getElementById("confirmation-details"),
+                    demoNotification: document.getElementById("demo-notification"),
+                    paymentNotification: document.getElementById("payment-notification"),
+                    closeBtns: document.querySelectorAll(".close")
+                }
+            };
+            
+            // State variables
+            let state = {
+                currentStudent: null
+            };
+            
+            // Initialize event listeners
+            function initEvents() {
+                // Close modal buttons
+                el.elements.closeBtns.forEach(btn => {
+                    btn.addEventListener("click", () => {
+                        el.modals.update.style.display = "none";
+                        el.modals.confirmation.style.display = "none";
+                    });
+                });
+                
+                // Close modal when clicking outside
+                window.addEventListener("click", (e) => {
+                    if (e.target === el.modals.update) {
+                        el.modals.update.style.display = "none";
+                    }
+                    if (e.target === el.modals.confirmation) {
+                        el.modals.confirmation.style.display = "none";
+                    }
+                });
+                
+                // Delete student button
+                el.buttons.delete.addEventListener("click", () => {
+                    if (state.currentStudent) {
+                        deleteStudent(state.currentStudent.id);
+                        el.modals.update.style.display = "none";
+                    }
+                });
+                
+                // Update to paid button
+                el.buttons.update.addEventListener("click", () => {
+                    if (state.currentStudent) {
+                        updateToPaid(state.currentStudent.id, state.currentStudent);
+                    }
+                });
+                
+                // Confirm button
+                el.buttons.confirm.addEventListener("click", () => {
+                    el.modals.confirmation.style.display = "none";
+                    loadStudents();
+                });
+            }
+            
+            // Format date helper
+            function formatDate(date) {
+                return date.toLocaleDateString();
+            }
+            
+            // Days difference helper
+            function daysDiff(date1, date2) {
+                return Math.floor((date1 - date2) / (1000 * 60 * 60 * 24));
+            }
+            
+            // Clear tables
+            function clearTables() {
+                el.tables.demo.innerHTML = "";
+                el.tables.paid.innerHTML = "";
+                el.tables.unpaid.innerHTML = "";
+            }
+            
+            // Add animation class to a row
+            function addRowWithAnimation(row, delay = 0) {
+                row.classList.add("animate__animated", "animate__fadeIn");
+                row.style.animationDelay = `${delay}s`;
+                return row;
+            }
+            
+            // Add student to table
+            function addStudentToTable(student, tableType, index) {
+                const row = document.createElement("tr");
+                const delay = index * 0.1; // Stagger animations
+                
+                // Common cells
+                row.innerHTML = `
+                    <td>${student.name || ""}</td>
+                    <td>${student.class || ""}</td>
+                    <td>${student.subject || ""}</td>
+                `;
+                
+                // Table-specific cells
+                if (tableType === "demo") {
+                    row.innerHTML += `<td><button class="btn btn-update">Update</button></td>`;
+                    row.querySelector(".btn-update").addEventListener("click", () => openUpdateModal(student));
+                } 
+                else if (tableType === "paid") {
+                    const lastPaid = student.lastPaid ? formatDate(student.lastPaid.toDate()) : "N/A";
+                    row.innerHTML += `<td>${lastPaid}</td>`;
+                } 
+                else if (tableType === "unpaid") {
+                    const lastPaid = student.lastPaid ? formatDate(student.lastPaid.toDate()) : "N/A";
+                    row.innerHTML += `
+                        <td>${lastPaid}</td>
+                        <td><button class="btn btn-delete">Delete</button></td>
+                    `;
+                    row.querySelector(".btn-delete").addEventListener("click", () => deleteStudent(student.id));
+                }
+                
+                addRowWithAnimation(row, delay);
+                el.tables[tableType].appendChild(row);
+            }
+            
+            // Open update modal
+            function openUpdateModal(student) {
+                state.currentStudent = student;
+                el.elements.studentName.textContent = student.name || "this student";
+                el.modals.update.style.display = "flex";
+            }
+            
+            // Delete student
+            function deleteStudent(studentId) {
+                if (confirm("Are you sure you want to delete this student?")) {
+                    studentsRef.doc(studentId).delete()
+                        .then(() => {
+                            alert("Student deleted successfully!");
+                            loadStudents();
+                        })
+                        .catch(error => {
+                            console.error("Error deleting student:", error);
+                            alert("Error deleting student. Please try again.");
+                        });
+                }
+            }
+            
+            // Update student to paid
+            function updateToPaid(studentId, student) {
+                const now = firebase.firestore.Timestamp.now();
+                
+                studentsRef.doc(studentId).update({
+                    status: "paid",
+                    lastPaid: now
+                })
+                .then(() => {
+                    el.modals.update.style.display = "none";
+                    
+                    // Show confirmation details
+                    el.elements.confirmDetails.innerHTML = `
+                        <p><strong>Name:</strong> ${student.name || ""}</p>
+                        <p><strong>Class:</strong> ${student.class || ""}</p>
+                        <p><strong>Subject:</strong> ${student.subject || ""}</p>
+                        <p><strong>Fee:</strong> ${student.fee || ""}</p>
+                        <p><strong>Timing:</strong> ${student.timing || ""}</p>
+                        <p><strong>Status:</strong> <span class="text-success">Paid</span></p>
+                        <p><strong>Last Paid:</strong> ${formatDate(new Date())}</p>
+                    `;
+                    
+                    el.modals.confirmation.style.display = "flex";
+                })
+                .catch(error => {
+                    console.error("Error updating student:", error);
+                    alert("Error updating student. Please try again.");
+                });
+            }
+            
+            // Check for notifications
+            function checkNotifications() {
+                const now = new Date();
+                let hasOverdueDemos = false;
+                let hasOverduePaid = false;
+                
+                studentsRef.get().then(snapshot => {
+                    snapshot.forEach(doc => {
+                        const student = doc.data();
+                        
+                        // Check demo students older than 2 days
+                        if (student.status === "demo" && student.creationDate) {
+                            const creationDate = student.creationDate.toDate();
+                            if (daysDiff(now, creationDate) > 2) {
+                                hasOverdueDemos = true;
+                            }
+                        }
+                        
+                        // Check paid students who haven't paid in 31 days
+                        if (student.status === "paid" && student.lastPaid) {
+                            const lastPaidDate = student.lastPaid.toDate();
+                            if (daysDiff(now, lastPaidDate) > 31) {
+                                hasOverduePaid = true;
+                                
+                                // Update status to unpaid
+                                studentsRef.doc(doc.id).update({
+                                    status: "unpaid"
+                                });
+                            }
+                        }
+                    });
+                    
+                    // Show notifications with animation
+                    if (hasOverdueDemos) {
+                        el.elements.demoNotification.style.display = "block";
+                        el.elements.demoNotification.classList.add("animate__animated", "animate__pulse");
+                    } else {
+                        el.elements.demoNotification.style.display = "none";
+                    }
+                    
+                    if (hasOverduePaid) {
+                        el.elements.paymentNotification.style.display = "block";
+                        el.elements.paymentNotification.classList.add("animate__animated", "animate__pulse");
+                    } else {
+                        el.elements.paymentNotification.style.display = "none";
+                    }
+                });
+            }
+            
+            // Update student status based on time
+            function updateStatusIfNeeded(student, docId) {
+                const now = new Date();
+                
+                if (student.status === "paid" && student.lastPaid) {
+                    const lastPaidDate = student.lastPaid.toDate();
+                    if (daysDiff(now, lastPaidDate) > 31) {
+                        studentsRef.doc(docId).update({
+                            status: "unpaid"
+                        });
+                        student.status = "unpaid";
+                    }
+                }
+                
+                return student;
+            }
+            
+            // Load students data
+            function loadStudents() {
+                clearTables();
+                checkNotifications();
+                
+                // Group students by status
+                const students = {
+                    demo: [],
+                    paid: [],
+                    unpaid: []
+                };
+                
+                studentsRef.get().then(snapshot => {
+                    snapshot.forEach(doc => {
+                        const student = {...doc.data(), id: doc.id};
+                        const updatedStudent = updateStatusIfNeeded(student, doc.id);
+                        
+                        if (updatedStudent.status === "demo") {
+                            students.demo.push(updatedStudent);
+                        } else if (updatedStudent.status === "paid") {
+                            students.paid.push(updatedStudent);
+                        } else if (updatedStudent.status === "unpaid") {
+                            students.unpaid.push(updatedStudent);
+                        }
+                    });
+                    
+                    // Add students to tables with animated rows
+                    students.demo.forEach((student, index) => addStudentToTable(student, "demo", index));
+                    students.paid.forEach((student, index) => addStudentToTable(student, "paid", index));
+                    students.unpaid.forEach((student, index) => addStudentToTable(student, "unpaid", index));
+                    
+                }).catch(error => {
+                    console.error("Error loading students:", error);
+                });
+            }
+            
+            // Initialize app
+            function init() {
+                initEvents();
+                loadStudents();
+            }
+            
+            // Run on page load
+            document.addEventListener("DOMContentLoaded", init);
+        })();
+    </script>
+</body>
+</html>

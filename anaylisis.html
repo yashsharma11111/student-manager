@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Analysis Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Animation Library -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <style>
+    /* Base Styles */
+    :root {
+      --primary-color: #4cc9f0;
+      --secondary-color: #4895ef;
+      --accent-color: #3cb371;
+      --dark-bg: #121212;
+      --card-bg: #1e1e1e;
+      --text-primary: #e0e0e0;
+      --text-secondary: #a0a0a0;
+      --success-color: #4ade80;
+      --warning-color: #fbbf24;
+      --danger-color: #f87171;
+      --border-radius: 12px;
+      --glow-color: rgba(76, 201, 240, 0.5);
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    body {
+      background-color: var(--dark-bg);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem 1rem;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(76, 201, 240, 0.03) 0%, transparent 20%),
+        radial-gradient(circle at 80% 30%, rgba(60, 179, 113, 0.03) 0%, transparent 20%);
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 2rem;
+      color: var(--primary-color);
+      text-align: center;
+      font-weight: 700;
+      text-shadow: 0 0 10px rgba(76, 201, 240, 0.3);
+    }
+    
+    h2 {
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    
+    /* Card Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+      justify-content: center;
+    }
+    
+    /* For medium screens (tablets and smaller laptops) */
+    @media (max-width: 1200px) {
+      .dashboard-grid {
+        grid-template-columns: repeat(2, minmax(280px, 1fr));
+      }
+    }
+    
+    /* For small screens */
+    @media (max-width: 768px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+        max-width: 450px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    }
+    
+    .card {
+      background-color: var(--card-bg);
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      transition: all 0.4s ease;
+      border: 1px solid rgba(76, 201, 240, 0.1);
+      position: relative;
+      overflow: hidden;
+      height: 100%;
+    }
+    
+    .card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 8px 20px rgba(76, 201, 240, 0.2);
+      border-color: rgba(76, 201, 240, 0.3);
+    }
+    
+    .card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+      transform: scaleX(0);
+      transition: transform 0.6s ease;
+      transform-origin: left;
+    }
+    
+    .card:hover::after {
+      transform: scaleX(1);
+    }
+    
+    
+    /* Lists */
+    ul {
+      list-style-type: none;
+      margin-top: 0.5rem;
+    }
+    
+    li {
+      padding: 0.7rem 0;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    li:last-child {
+      border-bottom: none;
+    }
+    
+    /* Specific Cards */
+    #totalCount, #totalPaidFee {
+      text-align: center;
+      font-size: 1.1rem;
+    }
+    
+    #totalCount h2, #totalPaidFee h2 {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-size: 1.5rem;
+    }
+    
+    .text-4xl {
+      font-size: 2.5rem;
+      background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    
+    /* Status colors */
+    .paid-status {
+      color: var(--success-color);
+      text-shadow: 0 0 5px rgba(74, 222, 128, 0.4);
+    }
+    
+    .unpaid-status {
+      color: var(--danger-color);
+      text-shadow: 0 0 5px rgba(248, 113, 113, 0.4);
+    }
+    
+    /* Animations */
+    .animate-in {
+      animation: fadeInUp 0.6s ease forwards;
+      opacity: 0;
+    }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* Page wrapper for better centering */
+    .page-wrapper {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      justify-content: center;
+      width: 100%;
+      padding: 2rem 0;
+    }
+    
+    /* Responsive */
+    @media (max-width: 1366px) {
+      .container {
+        max-width: 900px;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      body {
+        padding: 1rem;
+      }
+      
+      h1 {
+        font-size: 1.8rem;
+      }
+      
+      .card {
+        padding: 1.2rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.6rem;
+      }
+      
+      .text-4xl {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header1" id="header1" style="
+    background-color: var(--card-bg); 
+    color: var(--text-primary); 
+    padding: 1.5rem 0;
+    border-bottom: 1px solid rgba(76, 201, 240, 0.1);
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+    <div class="container1" style="max-width: 1200px; margin: 0 auto; padding: 0 2rem;">
+        <nav class="nav1" id="nav1" style="display: flex; justify-content: space-between; align-items: center;">
+            <a href="documentantion.html" class="logo1" id="logo1" style="
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: var(--primary-color);
+                text-decoration: none;
+                background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;"></a>
+            
+            <ul class="menu1" id="menu1" style="
+                display: flex;
+                list-style-type: none;
+                margin: 0;
+                padding: 0;
+                gap: 1rem;">
+                <li>
+                    <a href="documentantion.html" class="link1" id="link1" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">DOC</a>
+                </li>
+                <li>
+                    <a href="form.html" class="link2" id="link2" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">Add</a>
+                </li>
+                <li>
+                    <a href="quiryfinal.html" class="link3" id="link3" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">Dashboard</a>
+                </li>
+                <li>
+                    <a href="search.html" class="link4" id="link4" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">Search</a>
+                </li>
+                <li>
+                    <a href="anaylisis.html" class="link5" id="link5" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.3);
+                        background-color: var(--primary-color);
+                        font-weight: 500;">Analysis</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</header>
+  <div class="page-wrapper">
+    <div class="container">
+      <h1 class="animate-in">📊 Student Analysis Dashboard</h1>
+      
+      <div class="dashboard-grid">
+        <div class="card glow-effect animate-in" id="totalCount" style="animation-delay: 0.1s"></div>
+        <div class="card glow-effect animate-in" id="totalPaidFee" style="animation-delay: 0.2s"></div>
+        <div class="card glow-effect animate-in" id="bySubject" style="animation-delay: 0.3s"></div>
+        <div class="card glow-effect animate-in" id="byClass" style="animation-delay: 0.4s"></div>
+        <div class="card glow-effect animate-in" id="paidBySubject" style="animation-delay: 0.5s"></div>
+        <div class="card glow-effect animate-in" id="unpaidBySubject" style="animation-delay: 0.6s"></div>
+        <div class="card glow-effect animate-in" id="paidThisWeek" style="animation-delay: 0.7s"></div>
+        <div class="card glow-effect animate-in" id="totalUnpaid" style="animation-delay: 0.8s"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 🔧 Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCQNpkj3EZtF6KNiFcwNnQU3Ez0f7Ocr4U",
+      authDomain: "admin-database-ca73d.firebaseapp.com",
+      projectId: "admin-database-ca73d",
+      storageBucket: "admin-database-ca73d.firebasestorage.app",
+      messagingSenderId: "796828178511",
+      appId: "1:796828178511:web:1695f31e505d391d38723a"
+    };
+
+    // 🔌 Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    async function fetchAndAnalyzeData() {
+      try {
+        const snapshot = await db.collection("students").get();
+        const students = snapshot.docs.map(doc => doc.data());
+
+        // ✅ Analysis Containers
+        let totalStudents = students.length;
+        let subjectCount = {};
+        let classCount = {};
+        let totalPaidFee = 0;
+        let paidBySubject = {};
+        let unpaidBySubject = {};
+        let paidThisWeekCount = 0;
+        let unpaidCount = 0;
+
+        // Get date from one week ago
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+        students.forEach(student => {
+          const { subject, class: studentClass, fee, status, lastPaid } = student;
+
+          // Count unpaid students
+          if (status === 'unpaid') {
+            unpaidCount++;
+          }
+
+          // Check if paid this week
+          if (lastPaid && lastPaid.seconds) {
+            const paymentDate = new Date(lastPaid.seconds * 1000);
+            if (paymentDate >= oneWeekAgo) {
+              paidThisWeekCount++;
+            }
+          }
+
+          // Subject Count
+          subjectCount[subject] = (subjectCount[subject] || 0) + 1;
+
+          // Class Count
+          classCount[studentClass] = (classCount[studentClass] || 0) + 1;
+
+          // Total Paid Fee
+          if (status === 'paid') {
+            totalPaidFee += Number(fee || 0);
+            paidBySubject[subject] = (paidBySubject[subject] || 0) + 1;
+          }
+
+          // Unpaid Subject Count
+          if (status === 'unpaid') {
+            unpaidBySubject[subject] = (unpaidBySubject[subject] || 0) + 1;
+          }
+        });
+
+        // 🔍 Render Results with better formatting
+        document.getElementById("totalCount").innerHTML = `
+          <h2 class="flex items-center justify-center">
+            <span class="mr-2">👥</span> Total Students
+          </h2>
+          <p class="text-4xl font-bold mt-4">${totalStudents}</p>
+        `;
+        
+        document.getElementById("totalPaidFee").innerHTML = `
+          <h2 class="flex items-center justify-center">
+            <span class="mr-2">💰</span> Total Paid Fee
+          </h2>
+          <p class="text-4xl font-bold mt-4">₹${totalPaidFee.toLocaleString()}</p>
+        `;
+
+        document.getElementById("bySubject").innerHTML = `
+          <h2><span class="mr-1">📚</span> Students by Subject</h2>
+          <ul>${
+            Object.entries(subjectCount)
+              .map(([sub, count]) => `<li><span>${sub}</span><span class="font-medium">${count}</span></li>`)
+              .join("")
+          }</ul>
+        `;
+
+        document.getElementById("byClass").innerHTML = `
+          <h2><span class="mr-1">🏫</span> Students by Class</h2>
+          <ul>${
+            Object.entries(classCount)
+              .map(([cls, count]) => `<li><span>Class ${cls}</span><span class="font-medium">${count}</span></li>`)
+              .join("")
+          }</ul>
+        `;
+
+        document.getElementById("paidBySubject").innerHTML = `
+          <h2><span class="mr-1">✅</span> Paid Students by Subject</h2>
+          <ul>${
+            Object.entries(paidBySubject)
+              .map(([sub, count]) => `<li><span>${sub}</span><span class="font-medium paid-status">${count}</span></li>`)
+              .join("")
+          }</ul>
+        `;
+    
+        
+
+
+
+
+        document.getElementById("unpaidBySubject").innerHTML = `
+          <h2><span class="mr-1">❌</span> Unpaid Students by Subject</h2>
+          <ul>${
+            Object.entries(unpaidBySubject)
+              .map(([sub, count]) => `<li><span>${sub}</span><span class="font-medium unpaid-status">${count}</span></li>`)
+              .join("")
+          }</ul>
+        `;
+
+
+       
+        
+
+
+
+
+        // Render new cards
+        document.getElementById("paidThisWeek").innerHTML = `
+          <h2 class="flex items-center justify-center">
+            <span class="mr-2">📅</span> Paid This Week
+          </h2>
+          <p class="text-4xl font-bold mt-4 paid-status">${paidThisWeekCount}</p>
+        `;
+
+        document.getElementById("totalUnpaid").innerHTML = `
+          <h2 class="flex items-center justify-center">
+            <span class="mr-2">⚠️</span> Unpaid Students
+          </h2>
+          <p class="text-4xl font-bold mt-4">${unpaidCount}</p>
+        `;
+
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        document.body.innerHTML += `<div class="text-red-500 text-center mt-8">Error loading data. Please try again.</div>`;
+      }
+    }
+
+    fetchAndAnalyzeData();
+  </script>
+</body>
+</html>

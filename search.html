@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Filter Dashboard</title>
+  <style>
+    /* Base Styles */
+    :root {
+      --primary-color: #2196F3;
+      --primary-dark: #1976D2;
+      --accent-color: #4CAF50;
+      --accent-dark: #388E3C;
+      --warning-color: #FFC107;
+      --error-color: #F44336;
+      --background-dark: #121212;
+      --card-bg: #1E1E1E;
+      --card-bg-hover: #2D2D2D;
+      --text-primary: #FFFFFF;
+      --text-secondary: #B0B0B0;
+      --border-color: #333333;
+      --shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+      --border-radius: 6px;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      transition: all 0.3s ease;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.6;
+      color: var(--text-primary);
+      background-color: var(--background-dark);
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    /* Header */
+    header {
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border-color);
+      animation: fadeInDown 0.8s ease;
+    }
+    
+    h2, h3 {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+    
+    h2 {
+      position: relative;
+      display: inline-block;
+      padding-bottom: 5px;
+    }
+    
+    h2:after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 50%;
+      height: 3px;
+      background: linear-gradient(to right, var(--primary-color), var(--accent-color));
+      border-radius: 3px;
+    }
+    
+    /* Filter Controls */
+    .filter-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+      animation: fadeIn 0.8s ease;
+    }
+    
+    select, input, button {
+      padding: 12px 15px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      font-size: 14px;
+      background-color: var(--card-bg);
+      color: var(--text-primary);
+      box-shadow: var(--shadow);
+    }
+    
+    select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B0B0B0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 35px;
+    }
+    
+    select:focus, input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.25);
+    }
+    
+    input {
+      flex-grow: 1;
+      min-width: 200px;
+    }
+    
+    button {
+      background: linear-gradient(to right, var(--primary-color), var(--primary-dark));
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      box-shadow: var(--shadow);
+      transform: translateY(0);
+    }
+    
+    button:hover {
+      background: linear-gradient(to right, var(--primary-dark), var(--primary-color));
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+    }
+    
+    button:active {
+      transform: translateY(1px);
+    }
+    
+    /* Filter Chips */
+    #activeFilters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 25px;
+      min-height: 30px;
+      animation: fadeIn 0.9s ease;
+    }
+    
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      background: linear-gradient(135deg, var(--primary-dark), var(--accent-dark));
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-size: 13px;
+      box-shadow: var(--shadow);
+      transform: translateY(0);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    
+    .filter-chip:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+    }
+    
+    .filter-chip button {
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 18px;
+      padding: 0 0 0 8px;
+      box-shadow: none;
+    }
+    
+    .filter-chip button:hover {
+      color: white;
+      background: none;
+      box-shadow: none;
+    }
+    
+    /* Error Message */
+    .error-message {
+      display: none;
+      background-color: rgba(244, 67, 54, 0.1);
+      border-left: 4px solid var(--error-color);
+      padding: 15px;
+      margin-bottom: 20px;
+      color: var(--error-color);
+      border-radius: 0 var(--border-radius) var(--border-radius) 0;
+      animation: slideInLeft 0.5s ease;
+    }
+    
+    /* Loading Indicator */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      color: var(--text-secondary);
+      position: relative;
+    }
+    
+    .loading:after {
+      content: '';
+      display: block;
+      width: 40px;
+      height: 40px;
+      margin: 10px auto;
+      border-radius: 50%;
+      border: 4px solid transparent;
+      border-top-color: var(--primary-color);
+      border-bottom-color: var(--accent-color);
+      animation: spin 1.5s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Table Styles */
+    .table-container {
+      overflow-x: auto;
+      background-color: var(--card-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      animation: fadeIn 1s ease;
+      margin-bottom: 30px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    th, td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    th {
+      background-color: rgba(0, 0, 0, 0.2);
+      font-weight: 500;
+      color: var(--primary-color);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+    
+    tr {
+      transition: background-color 0.3s;
+    }
+    
+    tr:hover {
+      background-color: var(--card-bg-hover);
+    }
+    
+    /* Status Indicators */
+    .status-paid {
+      display: inline-block;
+      padding: 5px 10px;
+      background-color: rgba(76, 175, 80, 0.2);
+      color: var(--accent-color);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .status-unpaid {
+      display: inline-block;
+      padding: 5px 10px;
+      background-color: rgba(244, 67, 54, 0.2);
+      color: var(--error-color);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Action Buttons */
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-edit {
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+      font-size: 12px;
+      padding: 6px 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .btn-delete {
+      background: linear-gradient(135deg, var(--error-color), #D32F2F);
+      font-size: 12px;
+      padding: 6px 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: 100;
+      overflow: auto;
+      backdrop-filter: blur(5px);
+    }
+    
+    .modal-content {
+      position: relative;
+      background-color: var(--card-bg);
+      margin: 15% auto;
+      padding: 0;
+      width: 90%;
+      max-width: 500px;
+      border-radius: var(--border-radius);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      animation: zoomIn 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+    }
+    
+    @keyframes zoomIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+      background: linear-gradient(135deg, var(--primary-dark), var(--accent-dark));
+    }
+    
+    .modal-header h3 {
+      margin: 0;
+      color: white;
+    }
+    
+    .close {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: color 0.3s;
+    }
+    
+    .close:hover {
+      color: white;
+    }
+    
+    /* Form Styles */
+    form {
+      padding: 20px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--primary-color);
+    }
+    
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 15px;
+      margin-top: 25px;
+    }
+    
+    .btn-cancel {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+    }
+    
+    .btn-cancel:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .btn-save {
+      background: linear-gradient(135deg, var(--accent-color), var(--accent-dark));
+    }
+    
+    .btn-save:hover {
+      background: linear-gradient(135deg, var(--accent-dark), var(--accent-color));
+    }
+    
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+      .filter-controls {
+        flex-direction: column;
+      }
+      
+      select, input, button {
+        width: 100%;
+      }
+      
+      .modal-content {
+        width: 95%;
+        margin: 10% auto;
+      }
+      
+      th, td {
+        padding: 12px 10px;
+        font-size: 14px;
+      }
+      
+      .action-buttons {
+        flex-direction: column;
+      }
+    }
+    
+    /* Mobile optimizations */
+    @media (max-width: 480px) {
+      .container {
+        padding: 15px 10px;
+      }
+      
+      h2 {
+        font-size: 20px;
+      }
+      
+      th, td {
+        padding: 10px 8px;
+        font-size: 13px;
+      }
+      
+      .status-paid, .status-unpaid {
+        padding: 4px 8px;
+        font-size: 11px;
+      }
+      
+      .btn-edit, .btn-delete {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header1" id="header1" style="
+    background-color: var(--card-bg); 
+    color: var(--text-primary); 
+    padding: 1.5rem 0;
+    border-bottom: 1px solid rgba(76, 201, 240, 0.1);
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+    <div class="container1" style="max-width: 1200px; margin: 0 auto; padding: 0 2rem;">
+        <nav class="nav1" id="nav1" style="display: flex; justify-content: space-between; align-items: center;">
+            <a href="documentantion.html" class="logo1" id="logo1" style="
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: var(--primary-color);
+                text-decoration: none;
+                background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;"></a>
+            
+            <ul class="menu1" id="menu1" style="
+                display: flex;
+                list-style-type: none;
+                margin: 0;
+                padding: 0;
+                gap: 1rem;">
+                <li>
+                    <a href="documentantion.html" class="link1" id="link1" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">DOC</a>
+                </li>
+                <li>
+                    <a href="form.html" class="link2" id="link2" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">Add</a>
+                </li>
+                <li>
+                    <a href="quiryfinal.html" class="link3" id="link3" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">Dashboard</a>
+                </li>
+                <li>
+                    <a href="search.html" class="link4" id="link4" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.1);
+                        background-color: var(--card-bg);
+                        font-weight: 500;">Search</a>
+                </li>
+                <li>
+                    <a href="anaylisis.html" class="link5" id="link5" style="
+                        color: var(--text-primary);
+                        text-decoration: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: var(--border-radius);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(76, 201, 240, 0.3);
+                        background-color: var(--primary-color);
+                        font-weight: 500;">Analysis</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</header>
+    
+    <div class="filter-controls">
+      <select id="fieldSelector">
+        <option value="name">Name</option>
+        <option value="status">Status</option>
+        <option value="class">Class</option>
+        <option value="timing">Timing</option>
+        <option value="fee">Fee</option>
+        <option value="subject">Subject</option>
+      </select>
+      
+      <input type="text" id="filterValue" placeholder="Enter value">
+      <button id="addFilterBtn">Add Filter</button>
+    </div>
+    
+    <div id="activeFilters"></div>
+    
+    <div id="errorMessage" class="error-message"></div>
+    
+    <h3 id="resultCount">Total: 0 results</h3>
+    
+    <div class="loading" id="loadingIndicator">
+      Loading data...
+    </div>
+    
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Class</th>
+            <th>Timing</th>
+            <th>Fee</th>
+            <th>Subject</th>
+            <th>Last Paid</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="resultTable"></tbody>
+      </table>
+    </div>
+  </div>
+  
+  <!-- Edit Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Edit Student</h3>
+        <span class="close">&times;</span>
+      </div>
+      
+      <div id="modalErrorMessage" class="error-message"></div>
+      
+      <form id="editForm">
+        <input type="hidden" id="editStudentId">
+        
+        <div class="form-group">
+          <label for="editName">Name</label>
+          <input type="text" id="editName" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="editStatus">Status</label>
+          <select id="editStatus">
+            <option value="paid">Paid</option>
+            <option value="unpaid">Unpaid</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="editClass">Class</label>
+          <input type="text" id="editClass" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="editTiming">Timing</label>
+          <input type="text" id="editTiming">
+        </div>
+        
+        <div class="form-group">
+          <label for="editFee">Fee</label>
+          <input type="number" id="editFee">
+        </div>
+        
+        <div class="form-group">
+          <label for="editSubject">Subject</label>
+          <input type="text" id="editSubject">
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" id="cancelEdit" class="btn-cancel">Cancel</button>
+          <button type="submit" class="btn-save">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+  <script>
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCQNpkj3EZtF6KNiFcwNnQU3Ez0f7Ocr4U",
+      authDomain: "admin-database-ca73d.firebaseapp.com",
+      projectId: "admin-database-ca73d",
+      storageBucket: "admin-database-ca73d.firebasestorage.app",
+      messagingSenderId: "796828178511",
+      appId: "1:796828178511:web:1695f31e505d391d38723a"
+    };
+
+    // Initialize Firebase
+    try {
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+      let filters = [];
+      let currentStudents = []; // Store current results for edit functionality
+      
+      // DOM Elements
+      const errorMessage = document.getElementById('errorMessage');
+      const modalErrorMessage = document.getElementById('modalErrorMessage');
+      const loadingIndicator = document.getElementById('loadingIndicator');
+      const editModal = document.getElementById('editModal');
+      const closeModalBtn = document.querySelector('.close');
+      const cancelEditBtn = document.getElementById('cancelEdit');
+      const editForm = document.getElementById('editForm');
+      
+      // Event Listeners
+      document.getElementById('addFilterBtn').addEventListener('click', addFilter);
+      document.getElementById('filterValue').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') addFilter();
+      });
+      
+      // Modal event listeners
+      closeModalBtn.addEventListener('click', closeModal);
+      cancelEditBtn.addEventListener('click', closeModal);
+      
+      // Close modal when clicking outside the modal content
+      window.addEventListener('click', function(event) {
+        if (event.target === editModal) {
+          closeModal();
+        }
+      });
+      
+      // Form submit event
+      editForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        saveChanges();
+      });
+      
+      // Functions
+      function showError(message, element = errorMessage) {
+        element.textContent = message;
+        element.style.display = 'block';
+        
+        // Add animation effect - remove first if exists
+        element.classList.remove('slideInLeft');
+        void element.offsetWidth; // Trigger reflow
+        element.classList.add('slideInLeft');
+        
+        setTimeout(() => {
+          element.style.opacity = '0';
+          setTimeout(() => {
+            element.style.display = 'none';
+            element.style.opacity = '1';
+          }, 300);
+        }, 5000);
+      }
+      
+      function showLoading(show = true) {
+        loadingIndicator.style.display = show ? 'block' : 'none';
+      }
+      
+      function addFilter() {
+        const field = document.getElementById('fieldSelector').value;
+        const value = document.getElementById('filterValue').value.trim();
+        
+        if (!value) {
+          return showError("Filter value cannot be empty!");
+        }
+        
+        filters.push({ field, value });
+        updateFilterChips();
+        fetchResults();
+        document.getElementById('filterValue').value = '';
+        
+        // Visual feedback
+        const btn = document.getElementById('addFilterBtn');
+        btn.classList.add('active');
+        setTimeout(() => {
+          btn.classList.remove('active');
+        }, 200);
+      }
+      
+      function removeFilter(index) {
+        filters.splice(index, 1);
+        updateFilterChips();
+        fetchResults();
+      }
+      
+      function updateFilterChips() {
+        const container = document.getElementById('activeFilters');
+        container.innerHTML = '';
+        
+        filters.forEach((f, i) => {
+          const chip = document.createElement('span');
+          chip.className = 'filter-chip';
+          chip.innerHTML = `${f.field} = ${f.value} <button onclick="removeFilter(${i})">×</button>`;
+          
+          // Add animation
+          chip.style.animationDelay = `${i * 0.1}s`;
+          
+          container.appendChild(chip);
+        });
+      }
+      
+      // Make removeFilter globally accessible for onclick event
+      window.removeFilter = removeFilter;
+      
+      function parseComparisonValue(value) {
+        const operators = {
+          '>': (a, b) => a > b,
+          '<': (a, b) => a < b,
+          '>=': (a, b) => a >= b,
+          '<=': (a, b) => a <= b,
+          '=': (a, b) => a == b
+        };
+      
+        // Match operator and value
+        const match = value.match(/^([<>]=?|=)?\s*(.+)$/);
+        if (!match) return null;
+      
+        const [, operator = '=', numValue] = match;
+        const number = parseFloat(numValue);
+      
+        return {
+          operator: operators[operator],
+          value: number
+        };
+      }
+      
+      async function fetchResults() {
+        showLoading(true);
+        errorMessage.style.display = 'none';
+        
+        try {
+          let ref = db.collection("students");
+          
+          // Apply filters
+          if (filters.length > 0) {
+            const snapshot = await ref.get();
+            let allStudents = snapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+            
+            // Client-side filtering
+            currentStudents = allStudents.filter(student => {
+              return filters.every(filter => {
+                // Handle numeric fields with comparisons
+                if (filter.field === 'fee') {
+                  const comparison = parseComparisonValue(filter.value);
+                  if (comparison && !isNaN(comparison.value)) {
+                    return comparison.operator(student[filter.field], comparison.value);
+                  }
+                  return student[filter.field]?.toString() === filter.value;
+                }
+                // Handle string comparison (case-insensitive)
+                if (student[filter.field] !== undefined) {
+                  return student[filter.field].toLowerCase().includes(filter.value.toLowerCase());
+                }
+                return false;
+              });
+            });
+          } else {
+            // No filters, get all documents
+            const snapshot = await ref.get();
+            currentStudents = snapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+          }
+          
+          renderResults(currentStudents);
+        } catch (err) {
+          console.error("Firestore query error:", err);
+          showError("Error fetching data: " + err.message);
+        } finally {
+          showLoading(false);
+        }
+      }
+      
+      function renderResults(data) {
+        const table = document.getElementById('resultTable');
+        const count = document.getElementById('resultCount');
+        table.innerHTML = '';
+        count.innerText = `Total: ${data.length} results`;
+        
+        if (data.length === 0) {
+          const row = document.createElement('tr');
+          row.innerHTML = `<td colspan="8" style="text-align: center;">No results found</td>`;
+          table.appendChild(row);
+          return;
+        }
+        
+        data.forEach((student, index) => {
+          const row = document.createElement('tr');
+          const statusClass = student.status === 'paid' ? 'status-paid' : 'status-unpaid';
+          
+          row.style.animationDelay = `${index * 0.05}s`;
+          row.style.animation = 'fadeIn 0.5s ease forwards';
+          
+          row.innerHTML = `
+            <td>${student.name || '-'}</td>
+            <td><span class="${statusClass}">${student.status || '-'}</span></td>
+            <td>${student.class || '-'}</td>
+            <td>${student.timing || '-'}</td>
+            <td>${student.fee ? '₹' + student.fee : '-'}</td>
+            <td>${student.subject || '-'}</td>
+            <td>${formatDate(student.lastPaid)}</td>
+            <td>
+              <div class="action-buttons">
+                <button class="btn-edit" onclick="openEditModal(${index})">Edit</button>
+              </div>
+            </td>
+          `;
+          table.appendChild(row);
+        });
+      }
+      
+      function formatDate(timestamp) {
+        if (!timestamp || !timestamp.seconds) return '-';
+        return new Date(timestamp.seconds * 1000).toLocaleDateString();
+      }
+      
+      function openEditModal(index) {
+        const student = currentStudents[index];
+        if (!student) return;
+        
+        // Fill the form with student data
+        document.getElementById('editStudentId').value = student.id;
+        document.getElementById('editName').value = student.name || '';
+        document.getElementById('editStatus').value = student.status || 'paid';
+        document.getElementById('editClass').value = student.class || '';
+        document.getElementById('editTiming').value = student.timing || '';
+        document.getElementById('editFee').value = student.fee || '';
+        document.getElementById('editSubject').value = student.subject || '';
+        
+        // Show the modal with animation
+        editModal.style.display = 'block';
+        
+        // Set focus to the first input field
+        document.getElementById('editName').focus();
+      }
+      
+      // Make openEditModal globally accessible for onclick event
+      window.openEditModal = openEditModal;
+      
+      function closeModal() {
+        editModal.style.opacity = '0';
+        setTimeout(() => {
+          editModal.style.display = 'none';
+          editModal.style.opacity = '1';
+          modalErrorMessage.style.display = 'none';
+        }, 300);
+      }
+      
+      async function saveChanges() {
+        modalErrorMessage.style.display = 'none';
+        
+        const studentId = document.getElementById('editStudentId').value;
+        if (!studentId) {
+          return showError("Student ID not found", modalErrorMessage);
+        }
+        
+        // Get current student data to check status change
+        const currentStudent = currentStudents.find(s => s.id === studentId);
+        const newStatus = document.getElementById('editStatus').value;
+        
+        const updatedData = {
+          name: document.getElementById('editName').value.trim(),
+          status: newStatus,
+          class: document.getElementById('editClass').value.trim(),
+          timing: document.getElementById('editTiming').value.trim(),
+          fee: document.getElementById('editFee').value ? Number(document.getElementById('editFee').value) : null,
+          subject: document.getElementById('editSubject').value.trim()
+        };
+        
+        // Update lastPaid date if status changes from unpaid to paid
+        if (currentStudent?.status === 'unpaid' && newStatus === 'paid') {
+          updatedData.lastPaid = firebase.firestore.Timestamp.now();
+        }
+        
+        // Validate required fields
+        if (!updatedData.name) {
+          return showError("Name is required", modalErrorMessage);
+        }
+        
+        if (!updatedData.class) {
+          return showError("Class is required", modalErrorMessage);
+        }
+        
+        try {
+          // Show loading feedback
+          showLoading(true);
+          
+          await db.collection('students').doc(studentId).update(updatedData);
+          console.log("Successfully updated student:", studentId);
+          
+          // Close modal and refresh results
+          closeModal();
+          fetchResults();
+          
+          // Show success message
+          showError("Student updated successfully!", errorMessage);
+        } catch (err) {
+          console.error("Error updating student:", err);
+          showError("Error saving changes: " + err.message, modalErrorMessage);
+        } finally {
+          showLoading(false);
+        }
+      }
+      
+      // Initial fetch
+      fetchResults();
+      
+    } catch (err) {
+      console.error("Firebase initialization error:", err);
+      showError("Error initializing Firebase: " + err.message);
+    }
+  </script>
+</body>
+</html>
